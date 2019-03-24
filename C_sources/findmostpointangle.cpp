@@ -9,31 +9,26 @@
 // ONSITE INTERVIEW EXAMPLE 2
 using namespace std;
 
+const double FOV = 10.;
 const double PI = 3.14159265;
-const double EPSILON = 1e-4;
 const int NO_OF_POINTS = 1000000;
 
-struct Point {
-  double x;
-  double y;
-  Point(double x, double y): x(x), y(y) {
-  }
+class Point{
+public:
+  double x, y;
+  Point(double x, double y) : x(x), y(y) {}
 };
 
-class Timer
-{
+class Timer {
 public:
   Timer()
     : beg_(clock_::now()) {}
-
   void reset() {
     beg_ = clock_::now();
   }
-
   double elapsed() const {
     return std::chrono::duration_cast<second_>(clock_::now() - beg_).count();
   }
-
 private:
   typedef std::chrono::high_resolution_clock clock_;
   typedef std::chrono::duration<double, std::ratio<1> > second_;
@@ -41,10 +36,10 @@ private:
 };
 
 int Partition(vector<double>& v, int first, int end) {
-  int pivot = v[first];
+  double pivot = v[first];
   int i = first + 1;
-  for(int j = first + 1; j < end; ++j) {
-    if(v[j] < pivot) {
+  for (int j = first + 1; j < end; ++j) {
+    if (v[j] < pivot) {
       iter_swap(v.begin()+j, v.begin()+i);
       ++i;
     }
@@ -54,101 +49,105 @@ int Partition(vector<double>& v, int first, int end) {
 }
 
 void QuickSort(vector<double>& v, int end, int first=0) {
-  if(first < end) {
+  if (first < end) {
     int q = Partition(v, first, end);
     QuickSort(v, q, first);
     QuickSort(v, end, q+1);
   }
 }
 
-bool AreSame(double a, double b) {
-  return fabs(a - b) < EPSILON;
-}
-
-int BinarySearch(const vector<double>& vec,
+int BinarySearch(const vector<double>& v,
                  double target,
                  int last,
                  int first = 0) {
-
-  if(first <= last && vec[0] < target) {
+  if (first <= last && v[0] < target) {
     int mid = (last - first) / 2 + first;
 
-    if(target > vec[last] || AreSame(vec[last], target)) {
+    if (v[last] <= target)
       return last;
-    }
 
-    if(target > vec[mid+1] || AreSame(vec[mid+1], target)) {
-      return BinarySearch(vec, target, last, mid+1);
-    }
-    else {
-      return BinarySearch(vec, target, mid, first);
-    }
+    if (v[mid + 1] <= target)
+      return BinarySearch(v, target, last, mid + 1);
+
+    else
+      return BinarySearch(v, target, mid, first);
   }
 
   return -1;
 }
 
-tuple<double, int> FindMostPointAngle(
-  const vector<Point>& points,
-  const Point& cam_center,
+tuple<double,int> FindMostPointAngle(
+  const vector<Point> points,
+  const Point cam_center,
   double fov) {
 
+  if (fov >= 360.) return make_tuple(.0, points.size() );
+
   vector<double> angles;
-  angles.reserve(points.size());
+  angles.reserve(points.size() );
 
-  for(auto& p : points) { // O(n)
-    double angle = atan2(p.y-cam_center.y, p.x-cam_center.x)*180/PI;
-    if (angle < 0) {
-      angle += 360.0;
-    }
-    angles.push_back( angle );
+  // O(n)
+  for (auto& p : points) {
+    double a = atan2(p.y - cam_center.y, p.x - cam_center.x) * 180/PI;
+    if (a < 0) a += 360.;
+    angles.push_back( a );
   }
 
-  QuickSort(angles, angles.size()); // O(n log n)
+  // O (n log n)
+  QuickSort(angles, angles.size());
 
-  int max_points = 0;
-  double angle_at_max = 0.0;
-  for(unsigned int i = 0; i < angles.size(); ++i) { // O(n log n)
-    int nr_of_points = 0;
-    if (fov + angles[i] < 360) {
-      int index = BinarySearch(angles, fov + angles[i], angles.size()-1);
-      nr_of_points = index - i + 1;
+  int upper, no_of_points, max_points = -1;
+  double angle_at_max = .0;
+  // O(n log n)
+  for (unsigned index = 0; index < angles.size(); ++index) {
+    if (fov + angles[index] <= 360.) {
+      upper = BinarySearch(angles, fov + angles[index], angles.size() - 1);
+      no_of_points = upper - index + 1;
     }
+
     else {
-      int index1 = BinarySearch(angles, 360, angles.size()-1);
-      int index2 = BinarySearch(angles, fov+angles[i]-360, angles.size()-1);
-      nr_of_points = index1 + index2 - i + 2;
+      upper = BinarySearch(angles, fov + (angles[index] - 360.), angles.size() - 1);
+      no_of_points = upper + angles.size() - index + 1;
     }
 
-    if (nr_of_points > max_points) {
-      max_points = nr_of_points;
-      angle_at_max = angles[i];
+    if (no_of_points > max_points) {
+      max_points = no_of_points;
+      angle_at_max = angles[index];
     }
   }
 
-  double result = angle_at_max + fov/2;
-  while (result > 360.) { // O(1)
-    result -= 360.;
+  angle_at_max += .5*fov;
+  while(angle_at_max > 360.) { // O(1)
+    angle_at_max -= 360.;
   }
 
-  return make_tuple(result, max_points);
+  return make_tuple(angle_at_max, max_points);
 }
 
 int main(int argc, char* argv[]) {
+
   vector<Point> points;
   points.reserve(NO_OF_POINTS);
-  random_device rseed;
-  mt19937 rng(rseed());
-  uniform_real_distribution<> dis(-1.0, 1.0);
-  for(int p = 0; p < 1000000; ++p) {
-    points.push_back(Point(dis(rng), dis(rng)));
+
+  {
+    random_device rseed;
+    mt19937 rng(rseed());
+    uniform_real_distribution<> dis(-1.0, 1.0);
+
+    for (int p = 0; p < NO_OF_POINTS; ++p)
+      points.push_back(Point(dis(rng), dis(rng)));
   }
 
   Timer tmr;
-  auto [angle, _] = FindMostPointAngle(points, Point(0.0,0.0), 15.0);
-
+  auto [angle, _] = FindMostPointAngle(points, Point(0, 0), FOV);
   cout << "took " << tmr.elapsed() << " seconds\n";
-  cout << "Angle [degrees]: " << angle << "\n";
-  cout << _ << "\n";
+
+  cout << "fov: " << FOV << endl;
+  cout << "Angle: " << angle << " [" << (angle - .5*FOV) << "," << (angle + .5*FOV);
+  if (angle + .5*FOV < 360.)
+    cout << "]\n";
+  else
+    cout << "(" << angle + .5*FOV - 360. << ")]\n";
+  cout << _ << endl;
   return 0;
 }
