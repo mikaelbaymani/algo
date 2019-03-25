@@ -59,10 +59,10 @@ static void __heapify(heap* h, int parent) {
   int next = parent;
   int left = parent * 2 + 1;
   int right = parent * 2 + 2;
-  if (left < h->size && h->compare(h->array[parent], h->array[left])) {
+  if (left >= 0 && left < h->size && h->compare(h->array[next], h->array[left])) {
     next = left;
   }
-  if (right < h->size && h->compare(h->array[parent], h->array[right])) {
+  if (right >= 0 && right < h->size && h->compare(h->array[next], h->array[right])) {
     next = right;
   }
 
@@ -70,6 +70,7 @@ static void __heapify(heap* h, int parent) {
     h->array[next] = h->array[next] ^ h->array[parent];
     h->array[parent] = h->array[parent] ^ h->array[next];
     h->array[next] = h->array[next] ^ h->array[parent];
+    __heapify(h, next);
   }
 }
 
