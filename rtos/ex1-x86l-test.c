@@ -52,7 +52,7 @@ OS_STK Task9Stack[TASK_STK_SIZE];
 OS_STK TaskStartStack[TASK_STK_SIZE];
 // End of your code!!
 char          TaskData[N_TASKS];                      /* Parameters to pass to each task               */
-OS_EVENT     *RandomSem;
+OS_EVENT     *RandomMtx;
 
 
 /*
@@ -87,7 +87,7 @@ int  main (void)
     OSInit();
 // End of your code!!
 
-    RandomSem   = OSSemCreate(1);                          /* Random number semaphore                  */
+    RandomMtx   = OSMutexCreate(0, &err);                  /* Random number mutex                      */
     PC_DispClrScr(DISP_FGND_WHITE + DISP_BGND_BLACK);      /* Clear the screen                         */
 
 /*
@@ -277,10 +277,10 @@ void  Task (void *pdata)
 
     for (;;) {
 
-        OSSemPend(RandomSem, 0, &err);           /* Acquire semaphore to perform random numbers        */
+        OSMutexPend(RandomMtx, 0, &err);         /* Acquire mutex to perform random numbers            */
         x = rand() % 78;                         /* Find X position where task number will appear      */
         y = rand() % 15;                         /* Find Y position where task number will appear      */
-        OSSemPost(RandomSem);                    /* Release semaphore                                  */
+        OSMutexPost(RandomMtx);                  /* Release mutex                                      */
 
                                                  /* Display the task number on the screen              */
         /* @Feb 17th, 2010 By: Amr Ali Abdel-Naby */
