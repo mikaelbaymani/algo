@@ -39,7 +39,7 @@ private:
  *
  * km.clusterData(init_means, 4);
  *
- *  km.printClusters();
+ * km.printClusters();
  */
 
 #endif//KMEANS_HPP
